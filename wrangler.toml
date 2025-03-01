@@ -1,1 +1,1 @@
-npx wrangler pages deploy .
+name = "leben-in-deutschland"
