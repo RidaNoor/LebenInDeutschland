@@ -13,13 +13,23 @@
     <p>This interactive quiz contains questions from the official German citizenship test ("Leben in Deutschland" and
         "Einbürgerungstest"). Practice by answering questions in both German and English.</p>
 
-    <div class="filter-controls"> 
-        <label for="sectionSelect">Choose a section: </label>
-        <select id="sectionSelect">
-            <option value="all">All Questions</option>
-            <option value="general" selected>General Questions</option>
-            <option value="states">Federal State Questions</option>
-        </select>
+    <div class="filter-controls">
+
+        <div>
+            <label for="questionRangeSelect">Go to question range: </label>
+            <select id="questionRangeSelect">
+                <option value="">Select question range...</option>
+            </select>
+        </div>
+
+        <div style="margin-top: 10px;">
+            <label for="sectionSelect">Choose a section: </label>
+            <select id="sectionSelect">
+                <option value="all">All Questions</option>
+                <option value="general" selected>General Questions</option>
+                <option value="states">Federal State Questions</option>
+            </select>
+        </div>
 
         <div id="stateSelector" style="margin-top: 10px; display: none;">
             <label for="stateSelect">Choose a federal state: </label>
@@ -52,7 +62,7 @@
     </div>
 
     <div class="quiz-container">
-        <div class="progress">Question <span id="currentQuestion">1</span> of <span id="totalQuestions">300</span></div>
+        <div class="progress"><span id="currentQuestion">1</span> of <span id="totalQuestions">300</span></div>
 
         <div id="questionContainer"></div>
 
@@ -84,6 +94,7 @@
         const searchInput = document.getElementById('searchInput');
         const searchButton = document.getElementById('searchButton');
         const resetButton = document.getElementById('resetButton');
+        const rangeSelect = document.getElementById('questionRangeSelect');
 
         async function fetchQuizData() {
             const response = await fetch('quizData.json'); // Adjust the path if necessary
@@ -100,6 +111,7 @@
             console.log(quizData); // Log the fetched data to the console for verification
             updateCurrentQuestions(quizData);
             displayQuestion();
+            updateQuestionRangeDropdown();
 
             // Event listeners
             prevButton.addEventListener('click', goToPreviousQuestion);
@@ -117,6 +129,7 @@
                 currentQuestionIndex = 0;
                 updateCurrentQuestions(quizData);
                 displayQuestion();
+                updateQuestionRangeDropdown();
             });
 
             stateSelect.addEventListener('change', function () {
@@ -124,6 +137,7 @@
                 currentQuestionIndex = 0;
                 updateCurrentQuestions(quizData);
                 displayQuestion();
+                updateQuestionRangeDropdown();
             });
 
             searchButton.addEventListener('click', function () {
@@ -178,26 +192,39 @@
                 currentQuestions = filteredQuestions;
                 currentQuestionIndex = 0;
                 totalQuestionsSpan.textContent = currentQuestions.length;
-                
+
                 // Display the first matching question
                 if (currentQuestions.length > 0) {
                     displayQuestion();
+                    updateQuestionRangeDropdown();
                 } else {
                     questionContainer.innerHTML = '<p>No matching questions found. Please try a different search term.</p>';
                     prevButton.disabled = true;
                     nextButton.disabled = true;
+                    // Clear range dropdown
+                    rangeSelect.innerHTML = '<option value="">No questions available</option>';
                 }
             });
 
             // Add reset button functionality
-            resetButton.addEventListener('click', function() {
+            resetButton.addEventListener('click', function () {
                 // Clear the search input
                 searchInput.value = '';
-                
+
                 // Reset to the current section/state questions without filtering
                 currentQuestionIndex = 0;
                 updateCurrentQuestions(quizData);
                 displayQuestion();
+                updateQuestionRangeDropdown();
+            });
+
+            rangeSelect.addEventListener('change', function () {
+                const selectedRange = this.value;
+                if (selectedRange) {
+                    // Parse the start index from the selected range value
+                    currentQuestionIndex = parseInt(selectedRange);
+                    displayQuestion();
+                }
             });
         }
 
@@ -240,6 +267,41 @@
             totalQuestionsSpan.textContent = currentQuestions.length;
         }
 
+        function updateQuestionRangeDropdown() {
+            rangeSelect.innerHTML = ''; // Clear previous options
+
+            // If no questions available, show a disabled option
+            if (currentQuestions.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No questions available';
+                rangeSelect.appendChild(option);
+                return;
+            }
+
+            // Add a default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select question range...';
+            rangeSelect.appendChild(defaultOption);
+
+            // Calculate the number of ranges (10 questions per range)
+            const totalRanges = Math.ceil(currentQuestions.length / 10);
+
+            // Create options for each range
+            for (let i = 0; i < totalRanges; i++) {
+                const startIndex = i * 10;
+                const endIndex = Math.min(startIndex + 9, currentQuestions.length - 1);
+                const startQuestion = startIndex + 1;
+                const endQuestion = endIndex + 1;
+
+                const option = document.createElement('option');
+                option.value = startIndex;
+                option.textContent = `Questions ${startQuestion}-${endQuestion}`;
+                rangeSelect.appendChild(option);
+            }
+        }
+
         function displayQuestion() {
             const question = currentQuestions[currentQuestionIndex];
             currentQuestionSpan.textContent = `Question ${currentQuestionIndex + 1} of ${currentQuestions.length}`;
@@ -253,17 +315,17 @@
                         <div class="options">
                 `;
 
-                // Add German options
-                question.german.options.forEach((option, index) => {
-                    html += `
+            // Add German options
+            question.german.options.forEach((option, index) => {
+                html += `
                         <label class="option" data-index="${index}">
                             <input type="radio" name="german-option" value="${index}">
                             ${option}
                         </label>
                     `;
-                });
+            });
 
-                html += `
+            html += `
                         </div>
                     </div>
                     <div class="question-section english">
@@ -272,17 +334,17 @@
                         <div class="options">
                 `;
 
-                // Add English options
-                question.english.options.forEach((option, index) => {
-                    html += `
+            // Add English options
+            question.english.options.forEach((option, index) => {
+                html += `
                         <label class="option" data-index="${index}">
                             <input type="radio" name="english-option" value="${index}">
                             ${option}
                         </label>
                     `;
-                });
+            });
 
-                html += `
+            html += `
                         </div>
                     </div>
                 </div>
@@ -296,7 +358,7 @@
 
             // Add event listeners to options
             document.querySelectorAll('.question-section input[type="radio"]').forEach(option => {
-                option.addEventListener('click', function() {
+                option.addEventListener('click', function () {
                     // Clear previous selections
                     document.querySelectorAll('.question-section input[type="radio"]').forEach(opt => {
                         opt.checked = false;
